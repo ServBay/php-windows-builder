@@ -91,7 +91,31 @@ function Get-PhpDevelBuild {
             $binDirectoryPath = Join-Path $currentDirectory php-dev
 
             [System.IO.Compression.ZipFile]::ExtractToDirectory($binZipFilePath, $binDirectoryPath)
-            Move-Item $binDirectoryPath/php-*/* $binDirectoryPath/
+
+            Write-Host "==> Devel pack extracted to: $binDirectoryPath"
+            Write-Host "Contents after extraction:"
+            Get-ChildItem -Path $binDirectoryPath -Directory | ForEach-Object { Write-Host "  DIR: $($_.Name)" }
+
+            # Check if there's a subdirectory and move its contents
+            $subdirs = Get-ChildItem -Path $binDirectoryPath -Directory | Where-Object { $_.Name -match '^php-' }
+            if ($subdirs.Count -gt 0) {
+                $subdir = $subdirs[0]
+                Write-Host "Moving contents from subdirectory: $($subdir.Name)"
+                Move-Item "$($subdir.FullName)\*" $binDirectoryPath\ -Force
+                Remove-Item $subdir.FullName -Recurse -Force
+            }
+
+            Write-Host "Final php-dev structure:"
+            Get-ChildItem -Path $binDirectoryPath -Directory | ForEach-Object { Write-Host "  DIR: $($_.Name)" }
+            if (Test-Path "$binDirectoryPath\include\ext\standard") {
+                Write-Host "  ✓ include/ext/standard exists"
+                Get-ChildItem -Path "$binDirectoryPath\include\ext\standard" -Filter "php_smart_string.h" | ForEach-Object {
+                    Write-Host "    ✓ Found: $($_.Name)"
+                }
+            } else {
+                Write-Host "  ✗ include/ext/standard NOT FOUND"
+            }
+
             Add-Path -PathItem $binDirectoryPath
             Add-BuildLog tick PHP "PHP developer build added successfully"
             return $binDirectoryPath
