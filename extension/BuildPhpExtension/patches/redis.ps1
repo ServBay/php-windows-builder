@@ -8,12 +8,12 @@ if ($phpVersion -match '^(\d+)\.(\d+)') {
     if (($major -eq 8 -and $minor -ge 5) -or $major -gt 8) {
         Write-Host "Applying PHP 8.5+ compatibility patch for redis..."
 
-        # Fix smart_string.h header path
-        if (Test-Path "redis_array_impl.c") {
-            (Get-Content redis_array_impl.c) | ForEach-Object {
+        # Fix smart_string.h header path in common.h
+        if (Test-Path "common.h") {
+            (Get-Content common.h) | ForEach-Object {
                 $_ -replace '#include\s+<ext/standard/php_smart_string\.h>', '#include <zend_smart_string.h>'
-            } | Set-Content redis_array_impl.c
-            Write-Host "✓ Patched redis_array_impl.c"
+            } | Set-Content common.h
+            Write-Host "✓ Patched common.h"
         }
     }
 }
