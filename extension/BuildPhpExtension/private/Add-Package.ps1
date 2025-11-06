@@ -32,11 +32,13 @@ function Add-Package {
                 }
             }
             $Config.docs | ForEach-Object {
-                if($null -ne $_) {
+                if($null -ne $_ -and (Test-Path $_)) {
                     $directoryPath = [System.IO.Path]::GetDirectoryName($_)
                     $targetDir = Join-Path -Path artifacts -ChildPath $directoryPath
                     New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
                     Copy-Item -Path $_ -Destination $targetDir -Force
+                } elseif($null -ne $_ -and -not(Test-Path $_)) {
+                    Write-Host "⚠ Warning: Documentation file not found: $_"
                 }
             }
             Get-ChildItem -Path $Config.build_directory -Recurse -Filter "*.dll" | ForEach-Object {
