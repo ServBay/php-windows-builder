@@ -23,6 +23,13 @@ function Get-PhpDevelBuild {
             Add-StepLog "Adding developer build for PHP $($Config.php_version)"
             Add-Type -Assembly "System.IO.Compression.Filesystem"
             $phpSemver, $baseUrl, $fallbackBaseUrl = $BuildDetails.phpSemver, $BuildDetails.baseUrl, $BuildDetails.fallbackBaseUrl
+
+            # If phpSemver is empty and we have local build path, use php_version directly
+            if (($null -eq $phpSemver -or $phpSemver -eq '') -and $PhpBuildPath -ne '') {
+                Write-Host "phpSemver is empty, using php_version: $($Config.php_version)"
+                $phpSemver = $Config.php_version
+            }
+
             $tsPart = if ($Config.ts -eq "nts") {"nts-Win32"} else {"Win32"}
             $binZipFile = "php-devel-pack-$phpSemver-$tsPart-$($Config.vs_version)-$($Config.arch).zip"
             $binUrl = "$baseUrl/$binZipFile"
@@ -35,6 +42,8 @@ function Get-PhpDevelBuild {
             # Check if local PHP build path is provided and file exists
             Write-Host "==> Checking for local PHP devel build"
             Write-Host "PhpBuildPath parameter: '$PhpBuildPath'"
+            Write-Host "phpSemver from BuildDetails: '$($BuildDetails.phpSemver)'"
+            Write-Host "phpSemver used: '$phpSemver'"
             Write-Host "Expected file name: $binZipFile"
 
             if ($PhpBuildPath -ne '' -and (Test-Path $PhpBuildPath)) {
