@@ -54,6 +54,10 @@ inputs:
     description: Directory to build the extension in
     required: false
     default: 'build'
+  php-build-path:
+    description: Path to local PHP build artifacts (optional, if not provided will download from windows.php.net)
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -77,6 +81,7 @@ runs:
         AUTH_TOKEN: ${{inputs.auth-token}}
         AUTO_DETECT_ARGS: ${{env.auto-detect-args}}
         AUTO_DETECT_LIBS: ${{env.auto-detect-libs}}
+        PHP_BUILD_PATH: ${{inputs.php-build-path}}
       run: |
         Import-Module ${{ github.action_path }}\BuildPhpExtension -Force
         Invoke-PhpBuildExtension -ExtensionUrl "${{inputs.extension-url}}" `

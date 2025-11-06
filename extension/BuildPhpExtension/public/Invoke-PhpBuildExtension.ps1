@@ -58,6 +58,12 @@ function Invoke-PhpBuildExtension {
             $env:CONFIGURE_ARGS = $Args
         }
 
+        # Get PHP build path from environment variable
+        $PhpBuildPath = $env:PHP_BUILD_PATH
+        if($null -eq $PhpBuildPath) {
+            $PhpBuildPath = ''
+        }
+
         $currentDirectory = (Get-Location).Path
 
         $buildDirectory = Get-BuildDirectory
@@ -74,7 +80,8 @@ function Invoke-PhpBuildExtension {
                                         -Arch $Arch `
                                         -Ts $Ts `
                                         -VsVersion $VsData.vs `
-                                        -VsToolset $VsData.toolset
+                                        -VsToolset $VsData.toolset `
+                                        -PhpBuildPath $PhpBuildPath
 
         Invoke-Build -Config $config
 

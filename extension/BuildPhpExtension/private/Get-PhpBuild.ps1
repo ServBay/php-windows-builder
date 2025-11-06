@@ -12,7 +12,9 @@ function Get-PhpBuild {
         [Parameter(Mandatory = $true, Position=0, HelpMessage='Configuration for the extension')]
         [PSCustomObject] $Config,
         [Parameter(Mandatory = $true, Position=1, HelpMessage='Php Build Details')]
-        [PSCustomObject] $BuildDetails
+        [PSCustomObject] $BuildDetails,
+        [Parameter(Mandatory = $false, Position=2, HelpMessage='Local PHP build path')]
+        [string] $PhpBuildPath = ''
     )
     begin {
     }
@@ -30,13 +32,33 @@ function Get-PhpBuild {
                 $fallBackUrl = $fallBackUrl.replace("vc", "VC")
             }
 
-            try {
-                Get-File -Url $binUrl -OutFile $binZipFile
-            } catch {
+            # Check if local PHP build path is provided and file exists
+            if ($PhpBuildPath -ne '' -and (Test-Path $PhpBuildPath)) {
+                $localZipFile = Join-Path $PhpBuildPath $binZipFile
+                if (Test-Path $localZipFile) {
+                    Write-Host "Using local PHP build from: $localZipFile"
+                    Copy-Item -Path $localZipFile -Destination $binZipFile -Force
+                } else {
+                    Write-Host "Local PHP build not found at: $localZipFile, falling back to download"
+                    try {
+                        Get-File -Url $binUrl -OutFile $binZipFile
+                    } catch {
+                        try {
+                            Get-File -Url $fallBackUrl -OutFile $binZipFile
+                        } catch {
+                            throw "Failed to download the build for PHP version $( $Config.php_version )."
+                        }
+                    }
+                }
+            } else {
                 try {
-                    Get-File -Url $fallBackUrl -OutFile $binZipFile
+                    Get-File -Url $binUrl -OutFile $binZipFile
                 } catch {
-                    throw "Failed to download the build for PHP version $( $Config.php_version )."
+                    try {
+                        Get-File -Url $fallBackUrl -OutFile $binZipFile
+                    } catch {
+                        throw "Failed to download the build for PHP version $( $Config.php_version )."
+                    }
                 }
             }
 

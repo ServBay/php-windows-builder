@@ -46,7 +46,9 @@ function Add-BuildRequirements {
         [Parameter(Mandatory = $true, Position=6, HelpMessage='Visual Studio toolset')]
         [ValidateNotNull()]
         [ValidateLength(1, [int]::MaxValue)]
-        [string] $VsToolset
+        [string] $VsToolset,
+        [Parameter(Mandatory = $false, Position=7, HelpMessage='Local PHP build path')]
+        [string] $PhpBuildPath = ''
     )
     begin {
     }
@@ -60,8 +62,8 @@ function Add-BuildRequirements {
                                       -VsVersion $VsVersion `
                                       -VsToolset $VsToolset
         $buildDetails = Get-PhpBuildDetails -Config $Config
-        $prefix = Get-PhpBuild -Config $config -BuildDetails $buildDetails
-        Get-PhpDevelBuild -Config $config -BuildDetails $buildDetails
+        $prefix = Get-PhpBuild -Config $config -BuildDetails $buildDetails -PhpBuildPath $PhpBuildPath
+        Get-PhpDevelBuild -Config $config -BuildDetails $buildDetails -PhpBuildPath $PhpBuildPath
         Add-Dependencies -Config $config -Prefix $prefix
         return $config
     }
