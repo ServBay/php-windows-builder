@@ -33,13 +33,22 @@ function Get-PhpDevelBuild {
             }
 
             # Check if local PHP build path is provided and file exists
+            Write-Host "==> Checking for local PHP devel build"
+            Write-Host "PhpBuildPath parameter: '$PhpBuildPath'"
+            Write-Host "Expected file name: $binZipFile"
+
             if ($PhpBuildPath -ne '' -and (Test-Path $PhpBuildPath)) {
+                Write-Host "Local PHP build path exists: $PhpBuildPath"
+                Write-Host "Files in directory:"
+                Get-ChildItem -Path $PhpBuildPath | ForEach-Object { Write-Host "  - $($_.Name)" }
+
                 $localZipFile = Join-Path $PhpBuildPath $binZipFile
                 if (Test-Path $localZipFile) {
-                    Write-Host "Using local PHP devel build from: $localZipFile"
+                    Write-Host "✓ Using local PHP devel build from: $localZipFile"
                     Copy-Item -Path $localZipFile -Destination $binZipFile -Force
                 } else {
-                    Write-Host "Local PHP devel build not found at: $localZipFile, falling back to download"
+                    Write-Host "✗ Local PHP devel build not found at: $localZipFile"
+                    Write-Host "Falling back to download"
                     try {
                         Get-File -Url $binUrl -OutFile $binZipFile
                     } catch {
@@ -51,6 +60,12 @@ function Get-PhpDevelBuild {
                     }
                 }
             } else {
+                if ($PhpBuildPath -eq '') {
+                    Write-Host "✗ PhpBuildPath is empty, downloading from web"
+                } else {
+                    Write-Host "✗ PhpBuildPath does not exist: $PhpBuildPath"
+                    Write-Host "Downloading from web"
+                }
                 try {
                     Get-File -Url $binUrl -OutFile $binZipFile
                 } catch {
