@@ -121,14 +121,24 @@ Function Get-ExtensionConfig {
             }
 
             if($null -ne $composerJson) {
+                # List of PHP core extensions that should not be downloaded from PECL
+                $coreExtensions = @(
+                    'date', 'standard', 'json', 'spl', 'openssl', 'zlib', 'hash', 'pcre',
+                    'reflection', 'session', 'tokenizer', 'xml', 'filter', 'pdo', 'ctype',
+                    'dom', 'fileinfo', 'mbstring', 'simplexml', 'xmlreader', 'xmlwriter'
+                )
+
                 $composerJson."require" | ForEach-Object {
                     $_.PSObject.Properties | ForEach-Object {
                         if($_.Name -match "ext-") {
                             $requiredExtension = $_.Name.replace("ext-", "")
-                            if($_.Value -match "\d+\.\d+.*") {
-                                $requiredExtension += "-$($_.Value)"
+                            # Skip PHP core extensions
+                            if($coreExtensions -notcontains $requiredExtension) {
+                                if($_.Value -match "\d+\.\d+.*") {
+                                    $requiredExtension += "-$($_.Value)"
+                                }
+                                $config.extensions += $requiredExtension
                             }
-                            $config.extensions += $requiredExtension
                         } elseif(-not($_.Name -match "php")) {
                             # If using the stub composer.json
                             $Libraries += $_.Name
