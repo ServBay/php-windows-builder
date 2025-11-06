@@ -11,7 +11,11 @@ if ($phpVersion -match '^(\d+)\.(\d+)') {
         # Fix version check in config.w32 to support PHP 8.5+
         if (Test-Path "config.w32") {
             (Get-Content config.w32) | ForEach-Object {
-                $_ -replace '(PHP_VERSION_ID\s+<\s+)80500', '${1}80600'
+                # Change version check from >= 80500 to >= 80600
+                $_ = $_ -replace '(XDEBUG_PHP_VERSION\s+>=\s+)80500', '${1}80600'
+                # Change error message from 8.5.0 to 8.6.0
+                $_ = $_ -replace '(<\s+)8\.5\.0', '${1}8.6.0'
+                $_
             } | Set-Content config.w32
             Write-Host "✓ Patched config.w32 version check"
         }
