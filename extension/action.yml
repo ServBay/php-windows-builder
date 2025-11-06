@@ -79,8 +79,8 @@ runs:
         TEST_WORKERS: ${{inputs.test-workers}}
         BUILD_DIRECTORY: ${{inputs.build-directory}}
         AUTH_TOKEN: ${{inputs.auth-token}}
-        AUTO_DETECT_ARGS: ${{env.auto-detect-args}}
-        AUTO_DETECT_LIBS: ${{env.auto-detect-libs}}
+        AUTO_DETECT_ARGS: true
+        AUTO_DETECT_LIBS: true
         PHP_BUILD_PATH: ${{inputs.php-build-path}}
       run: |
         Import-Module ${{ github.action_path }}\BuildPhpExtension -Force
