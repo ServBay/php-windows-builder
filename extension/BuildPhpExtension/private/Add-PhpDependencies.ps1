@@ -18,7 +18,15 @@ Function Add-PhpDependencies {
         }
         $phpBaseUrl = 'https://downloads.php.net/~windows/php-sdk/deps'
         $phpTrunkBaseUrl = "https://downloads.php.net/~windows/php-sdk/deps/$($Config.vs_version)/$($Config.arch)"
-        $phpSeries = Get-File -Url "$phpBaseUrl/series/packages-$($Config.php_version)-$($Config.vs_version)-$($Config.arch)-staging.txt"
+
+        # Extract major.minor version (e.g., "8.5" from "8.5.0RC4")
+        $phpMajorMinor = $Config.php_version
+        if ($Config.php_version -match '^(\d+\.\d+)') {
+            $phpMajorMinor = $matches[1]
+        }
+        Write-Host "Using PHP series version: $phpMajorMinor (from $($Config.php_version))"
+
+        $phpSeries = Get-File -Url "$phpBaseUrl/series/packages-$phpMajorMinor-$($Config.vs_version)-$($Config.arch)-staging.txt"
         $phpTrunk = Get-File -Url $phpTrunkBaseUrl
         foreach ($library in $Config.php_libraries) {
             try {
