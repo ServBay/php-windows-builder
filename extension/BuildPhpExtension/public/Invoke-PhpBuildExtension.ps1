@@ -70,6 +70,9 @@ function Invoke-PhpBuildExtension {
 
         $source = Get-ExtensionSource -ExtensionUrl $ExtensionUrl -ExtensionRef $ExtensionRef
 
+        # Set PHP version for patch scripts
+        $env:PHP_VERSION_FOR_PATCHES = $PhpVersion
+
         $extension = Get-Extension -ExtensionUrl $source.url -ExtensionRef $source.ref -BuildDirectory $buildDirectory -LocalSrc $source.local
 
         Set-Location "$buildDirectory"

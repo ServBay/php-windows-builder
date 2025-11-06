@@ -15,9 +15,9 @@ Function Add-Patches {
     begin {
     }
     process {
-        # Apply patches only for php/php-windows-builder and shivammathur/php-windows-builder
+        # Apply patches only for php/php-windows-builder, shivammathur/php-windows-builder and ServBay/php-windows-builder
         if($null -ne $env:GITHUB_REPOSITORY) {
-            if($env:GITHUB_REPOSITORY -eq 'php/php-windows-builder' -or $env:GITHUB_REPOSITORY -eq 'shivammathur/php-windows-builder') {
+            if($env:GITHUB_REPOSITORY -eq 'php/php-windows-builder' -or $env:GITHUB_REPOSITORY -eq 'shivammathur/php-windows-builder' -or $env:GITHUB_REPOSITORY -eq 'ServBay/php-windows-builder') {
                 if(Test-Path -PATH $PSScriptRoot\..\patches\$Extension.ps1) {
                     . $PSScriptRoot\..\patches\$Extension.ps1
                 }
