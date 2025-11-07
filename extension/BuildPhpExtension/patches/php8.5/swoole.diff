@@ -1,0 +1,26 @@
+--- ext-src/swoole_sqlite.cc.bak	2025-09-22 03:34:55
++++ ext-src/swoole_sqlite.cc	2025-09-22 03:35:58
+@@ -96,16 +96,15 @@
+ void php_swoole_sqlite_minit(int module_id) {
+     if (zend_hash_str_find(&php_pdo_get_dbh_ce()->constants_table, ZEND_STRL("SQLITE_ATTR_OPEN_FLAGS")) == nullptr) {
+ #ifdef SQLITE_DETERMINISTIC
+-        REGISTER_PDO_CLASS_CONST_LONG("SQLITE_DETERMINISTIC", (zend_long) SQLITE_DETERMINISTIC);
++        zend_declare_class_constant_long(php_pdo_get_dbh_ce(), "SQLITE_DETERMINISTIC", strlen("SQLITE_DETERMINISTIC"), (zend_long) SQLITE_DETERMINISTIC);
+ #endif
+ 
+-        REGISTER_PDO_CLASS_CONST_LONG("SQLITE_ATTR_OPEN_FLAGS", (zend_long) PDO_SQLITE_ATTR_OPEN_FLAGS);
+-        REGISTER_PDO_CLASS_CONST_LONG("SQLITE_OPEN_READONLY", (zend_long) SQLITE_OPEN_READONLY);
+-        REGISTER_PDO_CLASS_CONST_LONG("SQLITE_OPEN_READWRITE", (zend_long) SQLITE_OPEN_READWRITE);
+-        REGISTER_PDO_CLASS_CONST_LONG("SQLITE_OPEN_CREATE", (zend_long) SQLITE_OPEN_CREATE);
+-        REGISTER_PDO_CLASS_CONST_LONG("SQLITE_ATTR_READONLY_STATEMENT", (zend_long) PDO_SQLITE_ATTR_READONLY_STATEMENT);
+-        REGISTER_PDO_CLASS_CONST_LONG("SQLITE_ATTR_EXTENDED_RESULT_CODES",
+-                                      (zend_long) PDO_SQLITE_ATTR_EXTENDED_RESULT_CODES);
++        zend_declare_class_constant_long(php_pdo_get_dbh_ce(), "SQLITE_ATTR_OPEN_FLAGS", strlen("SQLITE_ATTR_OPEN_FLAGS"), (zend_long) PDO_SQLITE_ATTR_OPEN_FLAGS);
++        zend_declare_class_constant_long(php_pdo_get_dbh_ce(), "SQLITE_OPEN_READONLY", strlen("SQLITE_OPEN_READONLY"), (zend_long) SQLITE_OPEN_READONLY);
++        zend_declare_class_constant_long(php_pdo_get_dbh_ce(), "SQLITE_OPEN_READWRITE", strlen("SQLITE_OPEN_READWRITE"), (zend_long) SQLITE_OPEN_READWRITE);
++        zend_declare_class_constant_long(php_pdo_get_dbh_ce(), "SQLITE_OPEN_CREATE", strlen("SQLITE_OPEN_CREATE"), (zend_long) SQLITE_OPEN_CREATE);
++        zend_declare_class_constant_long(php_pdo_get_dbh_ce(), "SQLITE_ATTR_READONLY_STATEMENT", strlen("SQLITE_ATTR_READONLY_STATEMENT"), (zend_long) PDO_SQLITE_ATTR_READONLY_STATEMENT);
++        zend_declare_class_constant_long(php_pdo_get_dbh_ce(), "SQLITE_ATTR_EXTENDED_RESULT_CODES", strlen("SQLITE_ATTR_EXTENDED_RESULT_CODES"), (zend_long) PDO_SQLITE_ATTR_EXTENDED_RESULT_CODES);
+     }
+ 
+     php_pdo_unregister_driver(&swoole_pdo_sqlite_driver);
