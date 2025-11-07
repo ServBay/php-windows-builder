@@ -1,11 +1,21 @@
 # Check if PHP version is 8.5 or higher
 $phpVersion = $env:PHP_VERSION_FOR_PATCHES
-if ($phpVersion -match '^(\d+)\.(\d+)') {
+
+# Treat "master" as PHP 8.6
+if ($phpVersion -eq "master") {
+    $major = 8
+    $minor = 6
+} elseif ($phpVersion -match '^(\d+)\.(\d+)') {
     $major = [int]$matches[1]
     $minor = [int]$matches[2]
+} else {
+    # Cannot parse version, skip patching
+    exit 0
+}
 
+if ($major -eq 8) {
     # PHP 8.5: Use manual replacement
-    if ($major -eq 8 -and $minor -eq 5) {
+    if ($minor -eq 5) {
         Write-Host "Applying PHP 8.5 compatibility patch for redis..."
 
         # Fix smart_string.h header path in common.h
@@ -18,7 +28,7 @@ if ($phpVersion -match '^(\d+)\.(\d+)') {
     }
 
     # PHP 8.6: Use patch files
-    if ($major -eq 8 -and $minor -eq 6) {
+    if ($minor -eq 6) {
         Write-Host "Applying PHP 8.6 patches for redis..."
 
         # First apply PHP 8.5 patch

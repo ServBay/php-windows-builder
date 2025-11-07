@@ -1,11 +1,21 @@
 # Check if PHP version is 8.1 or higher
 $phpVersion = $env:PHP_VERSION_FOR_PATCHES
-if ($phpVersion -match '^(\d+)\.(\d+)') {
+
+# Treat "master" as PHP 8.6
+if ($phpVersion -eq "master") {
+    $major = 8
+    $minor = 6
+} elseif ($phpVersion -match '^(\d+)\.(\d+)') {
     $major = [int]$matches[1]
     $minor = [int]$matches[2]
+} else {
+    # Cannot parse version, skip patching
+    exit 0
+}
 
+if ($major -eq 8) {
     # PHP 8.1-8.5: Use manual replacement
-    if ($major -eq 8 -and $minor -in @(1,2,3,4,5)) {
+    if ($minor -in @(1,2,3,4,5)) {
         Write-Host "Applying PHP 8.1+ compatibility patch for imagick..."
 
         if (Test-Path "imagick.c") {
@@ -49,7 +59,7 @@ $1#endif
     }
 
     # PHP 8.6: Use patch files
-    if ($major -eq 8 -and $minor -eq 6) {
+    if ($minor -eq 6) {
         Write-Host "Applying PHP 8.6 patches for imagick..."
 
         # First apply PHP 8.4 patch
