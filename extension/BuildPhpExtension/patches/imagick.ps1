@@ -52,34 +52,13 @@ $1#endif
 		$2
 '@
 
+        # 6. Fix php_strtolower -> zend_str_tolower (PHP 8.4+)
+        if ($minor -ge 4) {
+            $content = $content -replace 'php_strtolower\(', 'zend_str_tolower('
+            Write-Host "✓ Replaced php_strtolower with zend_str_tolower"
+        }
+
         Set-Content imagick.c -Value $content -NoNewline
         Write-Host "✓ Patched imagick.c"
-    }
-
-    # PHP 8.6: Apply additional patch files
-    if ($minor -eq 6) {
-        Write-Host "Applying PHP 8.6 additional patches..."
-
-        # First apply PHP 8.4 patch
-        $patch84File = "$PSScriptRoot\php8.4\imagick.patch"
-        if (Test-Path $patch84File) {
-            Write-Host "Applying PHP 8.4 patch..."
-            git apply --ignore-whitespace --reject $patch84File
-            if ($LASTEXITCODE -ne 0) {
-                throw "Failed to apply PHP 8.4 patch for imagick"
-            }
-            Write-Host "✓ PHP 8.4 patch applied"
-        }
-
-        # Then apply PHP 8.5 patch
-        $patch85File = "$PSScriptRoot\php8.5\imagick.c.diff"
-        if (Test-Path $patch85File) {
-            Write-Host "Applying PHP 8.5 patch..."
-            git apply --ignore-whitespace --reject $patch85File
-            if ($LASTEXITCODE -ne 0) {
-                throw "Failed to apply PHP 8.5 patch for imagick"
-            }
-            Write-Host "✓ PHP 8.5 patch applied"
-        }
     }
 }
