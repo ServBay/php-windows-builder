@@ -18,7 +18,14 @@ function Get-OlderVsVersion {
     process {
         $jsonContent = Get-Content -Path $jsonPath -Raw
         $VsConfig = ConvertFrom-Json -InputObject $jsonContent
-        $majorMinor = $PhpVersion.Substring(0, 3)
+
+        # Handle "master" version - use the configured VS version directly
+        if ($PhpVersion -eq "master") {
+            $majorMinor = "master"
+        } else {
+            $majorMinor = $PhpVersion.Substring(0, 3)
+        }
+
         $vsList = ($VsConfig.vs | Get-Member -MemberType *Property).Name
         return $vsList | Where-Object {
             # vs15 and above builds are compatible.

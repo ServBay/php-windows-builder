@@ -38,7 +38,14 @@ function Get-PeclLibraryZip {
     begin {
     }
     process {
-        $olderVs = Get-OlderVsVersion -PhpVersion $PhpVersion
+        # Map "master" to actual PHP version for library lookup
+        $phpVersionForLibrary = $PhpVersion
+        if ($PhpVersion -eq "master") {
+            $phpVersionForLibrary = "8.6.0"
+            Write-Host "Mapping PHP version 'master' to '8.6.0' for library lookup"
+        }
+
+        $olderVs = Get-OlderVsVersion -PhpVersion $phpVersionForLibrary
         foreach($vs in ((@($olderVs) + @($VsVersion)) | Sort-Object -Descending)) {
             $lib_name, $lib_version = ($Library -split '-')[0, 1]
             $key = $lib_name.toLower() + "-?([0-9].*)-$vs-$Arch\.zip"
