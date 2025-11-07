@@ -7,9 +7,9 @@ if ($phpVersion -match '^(\d+)\.(\d+)') {
     $major = [int]$matches[1]
     $minor = [int]$matches[2]
 
-    # Apply PHP 8.5+ compatibility patch
-    if (($major -eq 8 -and $minor -ge 5) -or $major -gt 8) {
-        Write-Host "Applying PHP 8.5+ compatibility patch for memcache..."
+    # PHP 8.5: Use manual replacement
+    if ($major -eq 8 -and $minor -eq 5) {
+        Write-Host "Applying PHP 8.5 compatibility patch for memcache..."
 
         # Fix smart_string headers
         if (Test-Path "src\memcache_pool.h") {
@@ -45,6 +45,33 @@ if ($phpVersion -match '^(\d+)\.(\d+)') {
                 $_ -replace '#include\s+"ext/standard/php_smart_string\.h"', '#include "zend_smart_string.h"'
             } | Set-Content src\memcache_binary_protocol.c
             Write-Host "✓ Patched src\memcache_binary_protocol.c (smart_string)"
+        }
+    }
+
+    # PHP 8.6: Use patch files
+    if ($major -eq 8 -and $minor -eq 6) {
+        Write-Host "Applying PHP 8.6 patches for memcache..."
+
+        # First apply PHP 8.5 patch
+        $patch85File = "$PSScriptRoot\php8.5\memcache.diff"
+        if (Test-Path $patch85File) {
+            Write-Host "Applying PHP 8.5 patch..."
+            git apply --ignore-whitespace --reject $patch85File
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to apply PHP 8.5 patch for memcache"
+            }
+            Write-Host "✓ PHP 8.5 patch applied"
+        }
+
+        # Then apply PHP 8.6 patch
+        $patch86File = "$PSScriptRoot\php8.6\memcache.patch"
+        if (Test-Path $patch86File) {
+            Write-Host "Applying PHP 8.6 patch..."
+            git apply --ignore-whitespace --reject $patch86File
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to apply PHP 8.6 patch for memcache"
+            }
+            Write-Host "✓ PHP 8.6 patch applied"
         }
     }
 }

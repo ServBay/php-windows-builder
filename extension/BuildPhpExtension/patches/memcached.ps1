@@ -6,9 +6,9 @@ if ($phpVersion -match '^(\d+)\.(\d+)') {
     $major = [int]$matches[1]
     $minor = [int]$matches[2]
 
-    # Apply PHP 8.5+ compatibility patch
-    if (($major -eq 8 -and $minor -ge 5) -or $major -gt 8) {
-        Write-Host "Applying PHP 8.5+ compatibility patch for memcached..."
+    # PHP 8.5: Use manual replacement
+    if ($major -eq 8 -and $minor -eq 5) {
+        Write-Host "Applying PHP 8.5 compatibility patch for memcached..."
 
         # Fix smart_string header
         if (Test-Path "php_memcached_private.h") {
@@ -24,6 +24,33 @@ if ($phpVersion -match '^(\d+)\.(\d+)') {
                 $_ -replace 'return\s+zend_exception_get_default\(\);', 'return zend_ce_exception;'
             } | Set-Content php_memcached.c
             Write-Host "✓ Patched php_memcached.c"
+        }
+    }
+
+    # PHP 8.6: Use patch files
+    if ($major -eq 8 -and $minor -eq 6) {
+        Write-Host "Applying PHP 8.6 patches for memcached..."
+
+        # First apply PHP 8.5 patch
+        $patch85File = "$PSScriptRoot\php8.5\memcached.diff"
+        if (Test-Path $patch85File) {
+            Write-Host "Applying PHP 8.5 patch..."
+            git apply --ignore-whitespace --reject $patch85File
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to apply PHP 8.5 patch for memcached"
+            }
+            Write-Host "✓ PHP 8.5 patch applied"
+        }
+
+        # Then apply PHP 8.6 patch
+        $patch86File = "$PSScriptRoot\php8.6\memcached.patch"
+        if (Test-Path $patch86File) {
+            Write-Host "Applying PHP 8.6 patch..."
+            git apply --ignore-whitespace --reject $patch86File
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to apply PHP 8.6 patch for memcached"
+            }
+            Write-Host "✓ PHP 8.6 patch applied"
         }
     }
 }

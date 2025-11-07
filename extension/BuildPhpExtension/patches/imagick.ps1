@@ -4,8 +4,8 @@ if ($phpVersion -match '^(\d+)\.(\d+)') {
     $major = [int]$matches[1]
     $minor = [int]$matches[2]
 
-    # Apply PHP 8.1+ compatibility patch (for PHP 8.5+)
-    if (($major -eq 8 -and $minor -ge 1) -or $major -gt 8) {
+    # PHP 8.1-8.5: Use manual replacement
+    if ($major -eq 8 -and $minor -in @(1,2,3,4,5)) {
         Write-Host "Applying PHP 8.1+ compatibility patch for imagick..."
 
         if (Test-Path "imagick.c") {
@@ -45,6 +45,33 @@ $1#endif
 
             Set-Content imagick.c -Value $content -NoNewline
             Write-Host "✓ Patched imagick.c"
+        }
+    }
+
+    # PHP 8.6: Use patch files
+    if ($major -eq 8 -and $minor -eq 6) {
+        Write-Host "Applying PHP 8.6 patches for imagick..."
+
+        # First apply PHP 8.4 patch
+        $patch84File = "$PSScriptRoot\php8.4\imagick.patch"
+        if (Test-Path $patch84File) {
+            Write-Host "Applying PHP 8.4 patch..."
+            git apply --ignore-whitespace --reject $patch84File
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to apply PHP 8.4 patch for imagick"
+            }
+            Write-Host "✓ PHP 8.4 patch applied"
+        }
+
+        # Then apply PHP 8.5 patch
+        $patch85File = "$PSScriptRoot\php8.5\imagick.c.diff"
+        if (Test-Path $patch85File) {
+            Write-Host "Applying PHP 8.5 patch..."
+            git apply --ignore-whitespace --reject $patch85File
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to apply PHP 8.5 patch for imagick"
+            }
+            Write-Host "✓ PHP 8.5 patch applied"
         }
     }
 }
