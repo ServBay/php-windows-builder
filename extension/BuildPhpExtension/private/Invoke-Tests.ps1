@@ -120,6 +120,8 @@ Function Invoke-Tests {
                 if($Config.php_version -match '^8\.5') {
                     Write-Host "⚠️  Tests failed for PHP 8.5, but continuing as PHP 8.5 is still unstable" -ForegroundColor Yellow
                     Add-BuildLog tick $($Config.name) "Tests completed with failures (PHP 8.5 - allowed)"
+                    # 重置退出代码，避免影响后续流程
+                    $global:LASTEXITCODE = 0
                 } else {
                     throw "Failed to run tests successfully"
                 }
