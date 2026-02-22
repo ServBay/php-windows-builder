@@ -103,6 +103,37 @@ if ($major -eq 8 -and ($minor -eq 5 -or $minor -eq 6)) {
         if (Test-Path "src\memcache_session.c") {
             $content = Get-Content src\memcache_session.c -Raw
             $content = $content -replace 'path = save_path;', 'path = ZSTR_VAL(save_path);'
+
+            # PHP 8.6: PS_MOD now references ps_create_sid and ps_validate_sid
+            # memcache uses PS_MOD (not PS_MOD_SID) but PHP 8.6 merged them
+            # Add stub implementations if not present
+            if ($content -notmatch 'PS_CREATE_SID_FUNC\(memcache\)') {
+                $stubs = @"
+
+/* PHP 8.6 compatibility: PS_MOD now requires create_sid and validate_sid */
+#if PHP_VERSION_ID >= 80600
+PS_CREATE_SID_FUNC(memcache)
+{
+	return php_session_create_id(NULL);
+}
+
+PS_VALIDATE_SID_FUNC(memcache)
+{
+	return SUCCESS;
+}
+#endif
+
+"@
+                # Add stubs before the ps_module definition (PS_MOD line)
+                if ($content -match 'ps_module\s+ps_mod_memcache') {
+                    $content = $content -replace '(ps_module\s+ps_mod_memcache)', "$stubs`$1"
+                } else {
+                    # Fallback: append at end of file
+                    $content = $content + $stubs
+                }
+                Write-Host "✓ Added PS_CREATE_SID_FUNC/PS_VALIDATE_SID_FUNC stubs"
+            }
+
             Set-Content src\memcache_session.c -Value $content -NoNewline
             Write-Host "✓ Fixed save_path type in memcache_session.c"
         }

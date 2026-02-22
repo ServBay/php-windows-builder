@@ -39,6 +39,24 @@ if ($major -eq 8 -and ($minor -eq 5 -or $minor -eq 6)) {
             }
         }
 
+        # Replace zval_dtor with zval_ptr_dtor_nogc in all .c files
+        Get-ChildItem -Path . -Filter "*.c" -Recurse | ForEach-Object {
+            $c = Get-Content $_.FullName -Raw
+            $changed = $false
+            if ($c -match 'zval_dtor\(') {
+                $c = $c -replace 'zval_dtor\(', 'zval_ptr_dtor_nogc('
+                $changed = $true
+            }
+            if ($c -match '(?<!\w)zval_is_true\(') {
+                $c = $c -replace '(?<!\w)zval_is_true\(', 'zend_is_true('
+                $changed = $true
+            }
+            if ($changed) {
+                Set-Content $_.FullName -Value $c -NoNewline
+                Write-Host "✓ Replaced zval_dtor/zval_is_true in $($_.Name)"
+            }
+        }
+
         # Add WRONG_PARAM_COUNT compatibility macro to common.h
         if (Test-Path "common.h") {
             $content = Get-Content common.h -Raw

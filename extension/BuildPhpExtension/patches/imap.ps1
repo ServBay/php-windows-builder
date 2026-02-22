@@ -23,46 +23,49 @@ if ($major -eq 8 -and $minor -ge 6) {
     if (Test-Path "php_imap.c") {
         $content = Get-Content php_imap.c -Raw
 
-        # Check if TSendMail is called with 10 arguments (old style)
-        if ($content -match 'TSendMail\([^)]+bufferCc') {
+        # Check if TSendMail is called with bufferCc (old 10-arg style)
+        if ($content -match 'TSendMail[\s\S]*?bufferCc') {
             Write-Host "Fixing TSendMail call for PHP 8.6 (10 args -> 7 args)..."
 
-            # The imap extension builds Cc/Bcc/RPath into separate buffers and passes them.
-            # In PHP 8.6, TSendMail handles these from the headers string directly.
-            # We need to:
-            # 1. Merge Cc and Bcc into the headers buffer before calling TSendMail
-            # 2. Remove the extra arguments from the TSendMail call
+            # Replace the TSendMail call line by line:
+            # Find: ZSTR_VAL(message), bufferCc, bufferBcc, rpath ? ZSTR_VAL(rpath) : NULL)
+            # Replace with: ZSTR_VAL(message))
+            # Then wrap the if block with preprocessor conditionals
 
-            # Add a preprocessor block that adapts the call based on PHP version
-            # Find the TSendMail call and wrap it
-            $content = $content -replace `
-                '(if\s*\(TSendMail\(INI_STR\("SMTP"\),\s*&tsm_err,\s*&tsm_errmsg,\s*bufferHeader,\s*ZSTR_VAL\(subject\),\s*\r?\n\s*bufferTo,\s*ZSTR_VAL\(message\),\s*bufferCc,\s*bufferBcc,\s*rpath\s*\?\s*ZSTR_VAL\(rpath\)\s*:\s*NULL\)\s*!=\s*SUCCESS\))', `
-                @'
-/* PHP 8.6+: Merge Cc/Bcc/RPath into headers, TSendMail has 7 params */
-#if PHP_VERSION_ID >= 80600
-            /* Append Cc header if present */
-            if (bufferCc && *bufferCc) {
-                size_t oldLen = strlen(bufferHeader);
-                size_t ccLen = strlen(bufferCc);
-                bufferHeader = erealloc(bufferHeader, oldLen + ccLen + 8);
-                snprintf(bufferHeader + oldLen, ccLen + 8, "\r\nCc: %s", bufferCc);
-            }
-            /* Append Bcc header if present */
-            if (bufferBcc && *bufferBcc) {
-                size_t oldLen = strlen(bufferHeader);
-                size_t bccLen = strlen(bufferBcc);
-                bufferHeader = erealloc(bufferHeader, oldLen + bccLen + 9);
-                snprintf(bufferHeader + oldLen, bccLen + 9, "\r\nBcc: %s", bufferBcc);
-            }
-            if (TSendMail(INI_STR("SMTP"), &tsm_err, &tsm_errmsg, bufferHeader, ZSTR_VAL(subject),
-                bufferTo, ZSTR_VAL(message)) != SUCCESS)
-#else
-            $1
-#endif
+            # Step 1: Replace the 10-arg call with 7-arg call wrapped in #if
+            # Match the entire if(TSendMail(...)) block using (?s) for dotall mode
+            $pattern = '(?s)([ \t]*)(if\s*\(TSendMail\(INI_STR\("SMTP"\).*?ZSTR_VAL\(message\)),\s*bufferCc,\s*bufferBcc,\s*rpath\s*\?\s*ZSTR_VAL\(rpath\)\s*:\s*NULL\)(\s*!=\s*SUCCESS\)\s*\{)'
+            $replacement = @'
+$1/* PHP 8.6+: Merge Cc/Bcc into headers, TSendMail signature changed */
+$1#if PHP_VERSION_ID >= 80600
+$1if (bufferCc && *bufferCc) {
+$1	size_t oldLen = strlen(bufferHeader);
+$1	size_t ccLen = strlen(bufferCc);
+$1	bufferHeader = erealloc(bufferHeader, oldLen + ccLen + 8);
+$1	snprintf(bufferHeader + oldLen, ccLen + 8, "\r\nCc: %s", bufferCc);
+$1}
+$1if (bufferBcc && *bufferBcc) {
+$1	size_t oldLen = strlen(bufferHeader);
+$1	size_t bccLen = strlen(bufferBcc);
+$1	bufferHeader = erealloc(bufferHeader, oldLen + bccLen + 9);
+$1	snprintf(bufferHeader + oldLen, bccLen + 9, "\r\nBcc: %s", bufferBcc);
+$1}
+$1$2)$3
+$1#else
+$1$2, bufferCc, bufferBcc, rpath ? ZSTR_VAL(rpath) : NULL)$3
+$1#endif
 '@
-
-            Set-Content php_imap.c -Value $content -NoNewline
-            Write-Host "✓ Fixed TSendMail call in php_imap.c"
+            $newContent = [regex]::Replace($content, $pattern, $replacement)
+            if ($newContent -ne $content) {
+                Set-Content php_imap.c -Value $newContent -NoNewline
+                Write-Host "✓ Fixed TSendMail call in php_imap.c"
+            } else {
+                Write-Host "WARNING: TSendMail regex replacement did not match, trying simple approach..."
+                # Fallback: simple text replacement of the extra args
+                $content = $content -replace '(ZSTR_VAL\(message\)),\s*bufferCc,\s*bufferBcc,\s*rpath\s*\?\s*ZSTR_VAL\(rpath\)\s*:\s*NULL\)', '$1)'
+                Set-Content php_imap.c -Value $content -NoNewline
+                Write-Host "✓ Fixed TSendMail call (simple mode - removed extra args)"
+            }
         } else {
             Write-Host "TSendMail call pattern not found or already patched"
         }

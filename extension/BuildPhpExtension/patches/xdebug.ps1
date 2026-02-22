@@ -26,8 +26,10 @@ if (($major -eq 8 -and $minor -ge 5) -or $major -gt 8) {
                 $_ = $_ -replace '(<\s+)8\.5\.0', '${1}8.6.0'
             } elseif ($minor -ge 6) {
                 # PHP 8.6+: Change version check to >= 80700
-                $_ = $_ -replace '(XDEBUG_PHP_VERSION\s+>=\s+)80500', '${1}80700'
-                $_ = $_ -replace '(<\s+)8\.5\.0', '${1}8.7.0'
+                # xdebug 3.5.0 uses 80600, older versions use 80500
+                $_ = $_ -replace '(XDEBUG_PHP_VERSION\s+>=\s+)8050\d', '${1}80700'
+                $_ = $_ -replace '(XDEBUG_PHP_VERSION\s+>=\s+)8060\d', '${1}80700'
+                $_ = $_ -replace '(<\s+)8\.[56]\.0', '${1}8.7.0'
             }
             $_
         } | Set-Content config.w32
