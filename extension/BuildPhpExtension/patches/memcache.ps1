@@ -55,7 +55,7 @@ if ($major -eq 8 -and ($minor -eq 5 -or $minor -eq 6)) {
         Write-Host "✓ Patched src\memcache_binary_protocol.c (smart_string)"
     }
 
-    # PHP 8.6: Apply additional patch file
+    # PHP 8.6: Apply additional patch file and text replacements
     if ($minor -eq 6) {
         Write-Host "Applying PHP 8.6 additional patches..."
 
@@ -64,9 +64,47 @@ if ($major -eq 8 -and ($minor -eq 5 -or $minor -eq 6)) {
             Write-Host "Applying PHP 8.6 patch..."
             git apply --ignore-whitespace --reject $patch86File
             if ($LASTEXITCODE -ne 0) {
-                throw "Failed to apply PHP 8.6 patch for memcache"
+                Write-Host "WARNING: git apply failed, applying text replacements as fallback..."
+            } else {
+                Write-Host "✓ PHP 8.6 patch applied"
             }
-            Write-Host "✓ PHP 8.6 patch applied"
+        }
+
+        # Add WRONG_PARAM_COUNT compatibility macro to php_memcache.h
+        if (Test-Path "src\php_memcache.h") {
+            $content = Get-Content src\php_memcache.h -Raw
+            if ($content -notmatch 'WRONG_PARAM_COUNT') {
+                $compatMacro = @"
+
+/* PHP 8.6 compatibility: WRONG_PARAM_COUNT macros removed */
+#if PHP_VERSION_ID >= 80600
+#ifndef WRONG_PARAM_COUNT
+#define WRONG_PARAM_COUNT { zend_wrong_param_count(); return; }
+#define ZEND_WRONG_PARAM_COUNT() { zend_wrong_param_count(); return; }
+#endif
+#endif
+
+"@
+                $content = $content -replace '(#ifndef\s+PHP_MEMCACHE_H\s*\r?\n#define\s+PHP_MEMCACHE_H)', "`$1`n$compatMacro"
+                Set-Content src\php_memcache.h -Value $content -NoNewline
+                Write-Host "✓ Added WRONG_PARAM_COUNT compatibility macro to php_memcache.h"
+            }
+        }
+
+        # Expand PS_FUNCS macro in php_memcache.h (PHP 8.6 has a semicolon issue)
+        if (Test-Path "src\php_memcache.h") {
+            $content = Get-Content src\php_memcache.h -Raw
+            $content = $content -replace 'PS_FUNCS\(memcache\);', 'PS_OPEN_FUNC(memcache); PS_CLOSE_FUNC(memcache); PS_READ_FUNC(memcache); PS_WRITE_FUNC(memcache); PS_DESTROY_FUNC(memcache); PS_GC_FUNC(memcache); PS_CREATE_SID_FUNC(memcache); PS_VALIDATE_SID_FUNC(memcache);'
+            Set-Content src\php_memcache.h -Value $content -NoNewline
+            Write-Host "✓ Expanded PS_FUNCS macro in php_memcache.h"
+        }
+
+        # Fix save_path type in memcache_session.c (const char* -> zend_string*)
+        if (Test-Path "src\memcache_session.c") {
+            $content = Get-Content src\memcache_session.c -Raw
+            $content = $content -replace 'path = save_path;', 'path = ZSTR_VAL(save_path);'
+            Set-Content src\memcache_session.c -Value $content -NoNewline
+            Write-Host "✓ Fixed save_path type in memcache_session.c"
         }
     }
 }

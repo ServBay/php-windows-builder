@@ -24,7 +24,7 @@ if ($major -eq 8 -and ($minor -eq 5 -or $minor -eq 6)) {
         Write-Host "✓ Patched common.h"
     }
 
-    # PHP 8.6: Apply additional patch file
+    # PHP 8.6: Apply additional patch file and text replacements
     if ($minor -eq 6) {
         Write-Host "Applying PHP 8.6 additional patches..."
 
@@ -33,9 +33,51 @@ if ($major -eq 8 -and ($minor -eq 5 -or $minor -eq 6)) {
             Write-Host "Applying PHP 8.6 patch..."
             git apply --ignore-whitespace --reject $patch86File
             if ($LASTEXITCODE -ne 0) {
-                throw "Failed to apply PHP 8.6 patch for redis"
+                Write-Host "WARNING: git apply failed, applying text replacements as fallback..."
+            } else {
+                Write-Host "✓ PHP 8.6 patch applied"
             }
-            Write-Host "✓ PHP 8.6 patch applied"
+        }
+
+        # Add WRONG_PARAM_COUNT compatibility macro to common.h
+        if (Test-Path "common.h") {
+            $content = Get-Content common.h -Raw
+            if ($content -notmatch 'WRONG_PARAM_COUNT') {
+                $compatMacro = @"
+/* PHP 8.6 compatibility: WRONG_PARAM_COUNT macros removed */
+#if PHP_VERSION_ID >= 80600
+#ifndef WRONG_PARAM_COUNT
+#define WRONG_PARAM_COUNT { zend_wrong_param_count(); return; }
+#define ZEND_WRONG_PARAM_COUNT() { zend_wrong_param_count(); return; }
+#endif
+#endif
+
+"@
+                $content = $content -replace '(#include\s+"php\.h"\s*\r?\n#include\s+"php_ini\.h"\s*\r?\n)', "`$1`n$compatMacro"
+                Set-Content common.h -Value $content -NoNewline
+                Write-Host "✓ Added WRONG_PARAM_COUNT compatibility macro to common.h"
+            }
+        }
+
+        # Fix save_path type in redis_session.c (const char* -> zend_string*)
+        if (Test-Path "redis_session.c") {
+            $content = Get-Content redis_session.c -Raw
+            if ($content -match 'PS_OPEN_FUNC\(redis\)' -and $content -notmatch '_save_path = ZSTR_VAL\(save_path\)') {
+                # Add local variable after the opening brace of PS_OPEN_FUNC
+                $content = $content -replace '(PS_OPEN_FUNC\(redis\)\s*\{[^\n]*\n(\s*(?:php_url|zval|int|redis_pool)[^\n]*\n)*)', "`$1    const char *_save_path = ZSTR_VAL(save_path);`n"
+                # Replace all save_path references with _save_path (but not _save_path itself)
+                $content = $content -replace '(?<![_\w])save_path(?!\s*\)|\s*;[^;]*ZSTR_VAL)', '_save_path'
+                Set-Content redis_session.c -Value $content -NoNewline
+                Write-Host "✓ Fixed save_path type in redis_session.c"
+            }
+        }
+
+        # Fix save_path in redis_cluster.c
+        if (Test-Path "redis_cluster.c") {
+            $content = Get-Content redis_cluster.c -Raw
+            $content = $content -replace 'estrdup\(save_path\)', 'estrdup(ZSTR_VAL(save_path))'
+            Set-Content redis_cluster.c -Value $content -NoNewline
+            Write-Host "✓ Fixed save_path in redis_cluster.c"
         }
     }
 }
