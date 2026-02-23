@@ -55,6 +55,10 @@ Function Get-File {
                 } else {
                     throw "Failed to download the file from $Url - $($_.Exception.Message)"
                 }
+            } else {
+                $delay = (($i + 1) * 5) + (Get-Random -Minimum 0 -Maximum 5)
+                Write-Host "Download attempt $($i + 1)/$Retries failed, retrying in ${delay}s..."
+                Start-Sleep -Seconds $delay
             }
         }
     }

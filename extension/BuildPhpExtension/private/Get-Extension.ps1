@@ -38,12 +38,15 @@ function Get-Extension {
                     Set-Location $BuildDirectory
                     if ($ExtensionUrl -like "*pecl.php.net*") {
                         $extension = Split-Path -Path $ExtensionUrl -Leaf
+                        $jitter = Get-Random -Minimum 0 -Maximum 15
+                        Write-Host "Waiting ${jitter}s before PECL download to avoid rate limiting..."
+                        Start-Sleep -Seconds $jitter
                         try {
-                            Get-File -Url "https://pecl.php.net/get/$extension-$ExtensionRef.tgz" -OutFile "$extension-$ExtensionRef.tgz"
+                            Get-File -Url "https://pecl.php.net/get/$extension-$ExtensionRef.tgz" -OutFile "$extension-$ExtensionRef.tgz" -Retries 5 -TimeoutSec 300
                         } catch {}
                         if(-not(Test-Path "$extension-$ExtensionRef.tgz")) {
                             try {
-                                Get-File -Url "https://pecl.php.net/get/$($extension.ToUpper())-$ExtensionRef.tgz" -OutFile "$extension-$ExtensionRef.tgz"
+                                Get-File -Url "https://pecl.php.net/get/$($extension.ToUpper())-$ExtensionRef.tgz" -OutFile "$extension-$ExtensionRef.tgz" -Retries 5 -TimeoutSec 300
                             } catch {}
                         }
                         & tar -xzf "$extension-$ExtensionRef.tgz" -C $BuildDirectory
