@@ -118,7 +118,7 @@ Function Invoke-Tests {
             if(-not $success) {
                 # 允许测试失败的情况：
                 # 1. PHP 8.5/8.6+ 新版本可能有不稳定的测试
-                # 2. 需要外部服务的扩展（memcache/memcached/redis）在 CI 中无法连接
+                # 2. 需要外部服务的扩展（memcache/memcached/redis/mongodb）在 CI 中无法连接
                 # 3. xdebug debugger 测试在 CI 中有权限问题
                 $allowFailure = $false
                 $reason = ""
@@ -126,7 +126,7 @@ Function Invoke-Tests {
                 if($Config.php_version -match '^8\.[56]' -or $Config.php_version -match '^master') {
                     $allowFailure = $true
                     $reason = "PHP $($Config.php_version) - test failures allowed"
-                } elseif($Config.name -in @('memcache', 'memcached', 'redis', 'xdebug')) {
+                } elseif($Config.name -in @('memcache', 'memcached', 'redis', 'xdebug', 'mongodb')) {
                     $allowFailure = $true
                     $reason = "$($Config.name) - server-dependent/environment-sensitive tests"
                 }
