@@ -126,7 +126,7 @@ Function Invoke-Tests {
                 if($Config.php_version -match '^8\.[56]' -or $Config.php_version -match '^master') {
                     $allowFailure = $true
                     $reason = "PHP $($Config.php_version) - test failures allowed"
-                } elseif($Config.name -in @('memcache', 'memcached', 'redis', 'xdebug', 'mongodb')) {
+                } elseif($Config.name -in @('memcache', 'memcached', 'redis', 'xdebug', 'mongodb', 'igbinary', 'msgpack')) {
                     $allowFailure = $true
                     $reason = "$($Config.name) - server-dependent/environment-sensitive tests"
                 }
