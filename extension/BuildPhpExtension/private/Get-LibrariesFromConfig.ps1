@@ -101,6 +101,11 @@ Function Get-LibrariesFromConfig {
         if($Extension -eq "memcached") {
             $foundItems += "zlib"
         }
+        # Add brotli and libzstd if libcurl is detected (libcurl 8.19+ requires them)
+        if($foundItems | Where-Object { $_ -match 'libcurl' }) {
+            if(-not($foundItems | Where-Object { $_ -match 'brotli' })) { $foundItems += "brotli" }
+            if(-not($foundItems | Where-Object { $_ -match 'libzstd' })) { $foundItems += "libzstd" }
+        }
 
         $highestVersions = @{}
 
