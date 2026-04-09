@@ -1,4 +1,4 @@
-set LDFLAGS="/d2:-AllowCompatibleILVersions" 2>&1
+set LDFLAGS="/d2:-AllowCompatibleILVersions" brotlidec.lib brotlicommon.lib libzstd.lib 2>&1
 call phpsdk_deps.bat -s staging -u 2>&1
 if errorlevel 1 exit 1
 call buildconf.bat 2>&1
