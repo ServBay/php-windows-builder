@@ -75,6 +75,49 @@ if (($major -eq 8 -and $minor -ge 5) -or $major -gt 8) {
             }
         }
 
+        # PHP 8.6 removed INI_STR / INI_INT / INI_FLT / INI_BOOL / EMPTY_SWITCH_DEFAULT_CASE.
+        # Inject backward-compatible #ifndef stubs into every .c file that calls one of them.
+        $stub = @"
+#ifndef INI_STR
+# define INI_STR(name) zend_ini_string((name), (size_t)strlen(name), 0)
+#endif
+#ifndef INI_INT
+# define INI_INT(name) zend_ini_long((name), (size_t)strlen(name), 0)
+#endif
+#ifndef INI_FLT
+# define INI_FLT(name) zend_ini_double((name), (size_t)strlen(name), 0)
+#endif
+#ifndef INI_BOOL
+# define INI_BOOL(name) zend_ini_parse_bool(zend_ini_str((name), (size_t)strlen(name), 0))
+#endif
+#ifndef EMPTY_SWITCH_DEFAULT_CASE
+# define EMPTY_SWITCH_DEFAULT_CASE() default: ZEND_UNREACHABLE();
+#endif
+
+"@
+        Get-ChildItem -Path . -Filter "*.c" -Recurse | ForEach-Object {
+            $cFile = $_.FullName
+            $cContent = Get-Content $cFile -Raw
+            if ($cContent -match '\b(INI_STR|INI_INT|INI_FLT|INI_BOOL|EMPTY_SWITCH_DEFAULT_CASE)\s*\(' `
+                -and $cContent -notmatch '#ifndef\s+INI_STR') {
+                # Inject after the LAST #include directive so the stub sees declarations from all headers
+                $lines = [System.Collections.Generic.List[string]]::new()
+                $cContent -split "`r?`n" | ForEach-Object { $lines.Add($_) }
+                $lastInclude = -1
+                for ($i = 0; $i -lt $lines.Count; $i++) {
+                    if ($lines[$i] -match '^\s*#\s*include\b') { $lastInclude = $i }
+                }
+                if ($lastInclude -ge 0) {
+                    $lines.Insert($lastInclude + 1, $stub.TrimEnd())
+                    $cContent = $lines -join "`r`n"
+                    Set-Content $cFile -Value $cContent -NoNewline
+                    Write-Host "✓ Injected INI_STR stubs into $($_.Name)"
+                } else {
+                    Write-Host "WARN: no #include found in $($_.Name); skipping stub injection"
+                }
+            }
+        }
+
         # Replace WRONG_PARAM_COUNT with equivalent code
         if (Test-Path "src\develop\php_functions.c") {
             $content = Get-Content src\develop\php_functions.c -Raw

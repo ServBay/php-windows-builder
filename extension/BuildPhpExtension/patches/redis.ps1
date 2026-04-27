@@ -71,7 +71,8 @@ if ($major -eq 8 -and ($minor -eq 5 -or $minor -eq 6)) {
 #endif
 
 "@
-                $content = $content -replace '(#include\s+"php\.h"\s*\r?\n#include\s+"php_ini\.h"\s*\r?\n)', "`$1`n$compatMacro"
+                # Inject after "#include "php_ini.h"" — INI_STR stub may sit between php.h and php_ini.h
+                $content = $content -replace '(#include\s+"php_ini\.h"\s*\r?\n)', "`$1`n$compatMacro"
                 Set-Content common.h -Value $content -NoNewline
                 Write-Host "✓ Added WRONG_PARAM_COUNT compatibility macro to common.h"
             }
