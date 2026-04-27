@@ -16,6 +16,46 @@ if ($phpVersion -eq "master") {
 if ($major -eq 8 -and $minor -ge 6) {
     Write-Host "Applying PHP 8.6 compatibility patch for imap..."
 
+    # PHP 8.6 removed INI_STR / INI_INT / INI_FLT / INI_BOOL / EMPTY_SWITCH_DEFAULT_CASE macros.
+    # Inject backward-compatible #ifndef stubs into php_imap.c.
+    $patch86File = "$PSScriptRoot\php8.6\imap.patch"
+    $stubsApplied = $false
+    if (Test-Path $patch86File) {
+        Write-Host "Applying PHP 8.6 INI_STR/EMPTY_SWITCH_DEFAULT_CASE stubs patch..."
+        git apply --ignore-whitespace --reject $patch86File
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "✓ PHP 8.6 stubs patch applied"
+            $stubsApplied = $true
+        } else {
+            Write-Host "WARNING: git apply failed for INI_STR stubs, falling back to direct injection..."
+        }
+    }
+    if (-not $stubsApplied -and (Test-Path "php_imap.c")) {
+        $imapContent = Get-Content php_imap.c -Raw
+        if ($imapContent -notmatch '#ifndef\s+INI_STR') {
+            $stub = @"
+#ifndef INI_STR
+# define INI_STR(name) zend_ini_string((name), (size_t)strlen(name), 0)
+#endif
+#ifndef INI_INT
+# define INI_INT(name) zend_ini_long((name), (size_t)strlen(name), 0)
+#endif
+#ifndef INI_FLT
+# define INI_FLT(name) zend_ini_double((name), (size_t)strlen(name), 0)
+#endif
+#ifndef INI_BOOL
+# define INI_BOOL(name) zend_ini_parse_bool(zend_ini_str((name), (size_t)strlen(name), 0))
+#endif
+#ifndef EMPTY_SWITCH_DEFAULT_CASE
+# define EMPTY_SWITCH_DEFAULT_CASE() default: ZEND_UNREACHABLE();
+#endif
+"@
+            $imapContent = $imapContent -replace '(#include\s+"php\.h"\s*\r?\n)', "`$1$stub`r`n"
+            Set-Content php_imap.c -Value $imapContent -NoNewline
+            Write-Host "✓ Injected INI_STR/EMPTY_SWITCH_DEFAULT_CASE stubs into php_imap.c"
+        }
+    }
+
     # PHP 8.6 changed TSendMail signature - removed mailCc, mailBcc, mailRPath parameters
     # Old: TSendMail(host, &err, &errmsg, headers, subject, to, message, cc, bcc, rpath)
     # New: TSendMail(host, &err, &errmsg, headers, subject, to, message)
