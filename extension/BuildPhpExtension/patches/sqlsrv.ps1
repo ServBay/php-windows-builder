@@ -50,4 +50,26 @@ if ($major -eq 8 -and $minor -eq 6) {
             Write-Host "✓ Injected INI_STR/INI_INT/INI_BOOL stubs into init.cpp"
         }
     }
+
+    # PHP 8.6 changed php_stream_wrapper_log_error's signature (context inserted before
+    # options; severity/terminating/code added after). sqlsrv's lone legacy 3-arg call
+    # in shared/core_stream.cpp then fails with C2660. Inject a same-name macro shim
+    # (a macro is not re-expanded within its own expansion, so the inner call hits the
+    # real 7-arg function) filling the new params with warning/None defaults.
+    $csFile = Get-ChildItem -Recurse -Filter "core_stream.cpp" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($csFile) {
+        $cs = Get-Content $csFile.FullName -Raw
+        if ($cs -notmatch 'log_error compat shim') {
+            $shim = @"
+/* php_stream_wrapper_log_error compat shim: PHP 8.6 changed the signature */
+#if defined(PHP_VERSION_ID) && PHP_VERSION_ID >= 80600
+#define php_stream_wrapper_log_error(wrapper, options, ...) \
+    php_stream_wrapper_log_error((wrapper), NULL, (options), E_WARNING, true, ZEND_ENUM_StreamErrorCode_None, __VA_ARGS__)
+#endif
+"@
+            $cs = $cs -replace '(#include\s+"core_sqlsrv\.h"\s*\r?\n)', "`$1$shim`r`n"
+            Set-Content $csFile.FullName -Value $cs -NoNewline
+            Write-Host "✓ Injected php_stream_wrapper_log_error shim into $($csFile.Name)"
+        }
+    }
 }
