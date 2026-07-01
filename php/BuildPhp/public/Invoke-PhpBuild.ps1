@@ -68,6 +68,15 @@ function Invoke-PhpBuild {
         }
         Move-Item $sourcePath $buildPath
         Set-Location "$buildPath"
+
+        # PHP 8.6 removed XtOffsetOf from Zend/zend_portability.h; restore it (guarded)
+        # so the compiled devel pack ships it and PECL extensions that include this
+        # header keep building. Versions that still define it are unaffected.
+        $zpHeader = "Zend\zend_portability.h"
+        if ((Test-Path $zpHeader) -and -not (Select-String -Path $zpHeader -SimpleMatch 'define XtOffsetOf' -Quiet)) {
+            Add-Content -Path $zpHeader -Value "`n#ifndef XtOffsetOf`n# define XtOffsetOf(s_type, field) offsetof(s_type, field)`n#endif"
+        }
+
         New-Item "..\obj" -ItemType "directory" > $null 2>&1
         Copy-Item "..\config.$Ts.bat"
 
