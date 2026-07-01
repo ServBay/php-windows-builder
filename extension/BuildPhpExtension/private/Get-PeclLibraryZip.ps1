@@ -75,7 +75,9 @@ function Get-PeclLibraryZip {
                 }
             }
             if($options.Count -gt 0) {
-                $latest = $options | Sort-Object -Property { [version] $_.version } -Descending | Select-Object -First 1
+                # Some legacy libs carry non-numeric versions (e.g. c-client "2007f"),
+                # which [version] can't parse; fall back so Sort-Object doesn't throw.
+                $latest = $options | Sort-Object -Property { try { [version] $_.version } catch { [version] "0.0" } } -Descending | Select-Object -First 1
                 return $latest.name
             }
         }
