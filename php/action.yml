@@ -16,6 +16,10 @@ inputs:
   ts:
     description: Thread safety to build
     required: true
+  build-branch:
+    description: SDK build branch for deps/CRT (set to master to build a pre-GA source against master deps)
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -29,7 +33,8 @@ runs:
         Import-Module ${{ github.action_path }}\BuildPhp -Force
         Invoke-PhpBuild -PhpVersion ${{inputs.php-version}} `
                         -Arch ${{inputs.arch}} `
-                        -Ts ${{inputs.ts}}
+                        -Ts ${{inputs.ts}} `
+                        -BuildBranch '${{inputs.build-branch}}'
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v5

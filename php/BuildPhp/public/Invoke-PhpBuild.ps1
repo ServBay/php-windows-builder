@@ -20,7 +20,9 @@ function Invoke-PhpBuild {
         [Parameter(Mandatory = $true, Position=2, HelpMessage='PHP Build Type')]
         [ValidateNotNull()]
         [ValidateSet('nts', 'ts')]
-        [string] $Ts
+        [string] $Ts,
+        [Parameter(Mandatory = $false, Position=3, HelpMessage='SDK build branch for deps/CRT; set to master to build a pre-GA source against master deps')]
+        [string] $BuildBranch = ''
     )
     begin {
     }
@@ -31,9 +33,19 @@ function Invoke-PhpBuild {
             $fetchSrc = $False
             $PhpVersion = Get-SourcePhpVersion
         }
-        $VsConfig = (Get-VsVersion -PhpVersion $PhpVersion)
+        # CRT/deps come from the build branch when overridden (e.g. build a pre-GA
+        # tag against master's SDK deps, since the tag's own branch has no published
+        # deps yet); otherwise they come from the PHP version itself.
+        $vsRef = if ($BuildBranch) { $BuildBranch } else { $PhpVersion }
+        $VsConfig = (Get-VsVersion -PhpVersion $vsRef)
         if($null -eq $VsConfig.vs) {
-            throw "PHP version $PhpVersion is not supported."
+            throw "PHP version $vsRef is not supported."
+        }
+        # libsdk otherwise guesses the SDK branch from the source's php_version.h;
+        # pin it to the build branch so a pre-GA source resolves deps/CRT from an
+        # available branch (libsdk honors master via this env in guessCurrentBranchName).
+        if ($BuildBranch) {
+            $env:PHP_RMTOOLS_PHP_BUILD_BRANCH = $BuildBranch
         }
 
         $currentDirectory = (Get-Location).Path
