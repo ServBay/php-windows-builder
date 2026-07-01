@@ -41,14 +41,20 @@ function Get-PeclLibraryZip {
         # Map "master" to actual PHP version for library lookup
         # Use 8.5.0 because PECL website doesn't have 8.6 libraries yet
         $phpVersionForLibrary = $PhpVersion
-        if ($PhpVersion -eq "master") {
+        if ($PhpVersion -eq "master" -or $PhpVersion -match '^8\.6') {
             $phpVersionForLibrary = "8.5.0"
-            Write-Host "Mapping PHP version 'master' to '8.5.0' for library lookup"
+            Write-Host "Mapping PHP version '$PhpVersion' to '8.5.0' for library lookup (PECL has no 8.6 libraries yet)"
         }
 
         $olderVs = Get-OlderVsVersion -PhpVersion $phpVersionForLibrary
         foreach($vs in ((@($olderVs) + @($VsVersion)) | Sort-Object -Descending)) {
-            $lib_name, $lib_version = ($Library -split '-')[0, 1]
+            # Split on the LAST '-' so library names that themselves contain '-'
+            # (e.g. c-client-2) keep their name intact and the version is the tail.
+            if ($Library -match '^(.*)-([^-]+)$') {
+                $lib_name = $matches[1]; $lib_version = $matches[2]
+            } else {
+                $lib_name = $Library; $lib_version = $null
+            }
             $key = $lib_name.toLower() + "-?([0-9].*)-$vs-$Arch\.zip"
             $options = @()
             $ExtensionSeries.Links | ForEach-Object {
