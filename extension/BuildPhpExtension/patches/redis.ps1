@@ -51,9 +51,15 @@ if ($major -eq 8 -and ($minor -eq 5 -or $minor -eq 6)) {
                 $c = $c -replace '(?<!\w)zval_is_true\(', 'zend_is_true('
                 $changed = $true
             }
+            # PHP 8.6: php_hash_bin2hex removed from ext/hash/php_hash.h (core now
+            # uses zend_bin2hex in Zend/zend_string.h). phpredis still calls it.
+            if ($c -match 'php_hash_bin2hex\(') {
+                $c = $c -replace 'php_hash_bin2hex\(', 'zend_bin2hex('
+                $changed = $true
+            }
             if ($changed) {
                 Set-Content $_.FullName -Value $c -NoNewline
-                Write-Host "✓ Replaced zval_dtor/zval_is_true in $($_.Name)"
+                Write-Host "✓ Replaced zval_dtor/zval_is_true/php_hash_bin2hex in $($_.Name)"
             }
         }
 
@@ -97,6 +103,17 @@ if ($major -eq 8 -and ($minor -eq 5 -or $minor -eq 6)) {
             $content = $content -replace 'estrdup\(save_path\)', 'estrdup(ZSTR_VAL(save_path))'
             Set-Content redis_cluster.c -Value $content -NoNewline
             Write-Host "✓ Fixed save_path in redis_cluster.c"
+        }
+
+        # Fix rediscluster session save_path in redis_session.c (PHP 8.6 changed
+        # PS_OPEN_FUNC save_path from const char* to zend_string*). The redis
+        # PS_OPEN_FUNC save_path is handled above via _save_path; this covers the
+        # rediscluster handler's estrdup(save_path). Matches macOS build_package.
+        if (Test-Path "redis_session.c") {
+            $content = Get-Content redis_session.c -Raw
+            $content = $content -replace 'estrdup\(save_path\)', 'estrdup(ZSTR_VAL(save_path))'
+            Set-Content redis_session.c -Value $content -NoNewline
+            Write-Host "✓ Fixed rediscluster save_path in redis_session.c"
         }
     }
 }
