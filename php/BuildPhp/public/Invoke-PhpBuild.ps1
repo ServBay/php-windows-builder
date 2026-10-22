@@ -81,6 +81,14 @@ function Invoke-PhpBuild {
             Add-Content -Path $zpHeader -Value "`n#ifndef XtOffsetOf`n# define XtOffsetOf(s_type, field) offsetof(s_type, field)`n#endif"
         }
 
+        # brotli/zstd are only in the deps bundle from 8.2 on; naming them on
+        # older branches fails the final link with
+        #   LINK : fatal error LNK1181: cannot open input file 'brotlidec.lib'
+        # The runner reads this to decide which extra libs to request.
+        $featureMinor = [int](($PhpVersion -split '\.')[1])
+        $featureMajor = [int](($PhpVersion -split '\.')[0])
+        $env:PHP_BUILD_NEEDS_BROTLI = if ($featureMajor -gt 8 -or ($featureMajor -eq 8 -and $featureMinor -ge 2)) { "1" } else { "0" }
+
         New-Item "..\obj" -ItemType "directory" > $null 2>&1
         Copy-Item "..\config.$Ts.bat"
 
