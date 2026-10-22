@@ -69,6 +69,10 @@ function Invoke-PhpBuild {
         Move-Item $sourcePath $buildPath
         Set-Location "$buildPath"
 
+        # Vendored security backports for releases upstream no longer patches.
+        # Matched on the upstream x.y.z, so mainstream versions build unmodified.
+        Invoke-PhpSecurityPatch -PhpVersion $PhpVersion
+
         # PHP 8.6 removed XtOffsetOf from Zend/zend_portability.h; restore it (guarded)
         # so the compiled devel pack ships it and PECL extensions that include this
         # header keep building. Versions that still define it are unaffected.

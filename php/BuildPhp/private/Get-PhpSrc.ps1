@@ -19,15 +19,25 @@ function Get-PhpSrc {
         $zipFile = "php-$PhpVersion.zip"
         $directory = "php-$PhpVersion-src"
 
-        if ( $PhpVersion.Contains("."))
+        # A local security backport is published one segment above the upstream
+        # tag (8.1.34.1 over 8.1.34) so the registry ranks it higher; upstream
+        # never tags the extra segment. Fetch the release the build is based on
+        # and keep the extra segment for the directory name only.
+        $tagVersion = $PhpVersion
+        if ( $PhpVersion -match '^(\d+\.\d+\.\d+)\.\d+$' ) {
+            $tagVersion = $Matches[1]
+            Write-Host "Version $PhpVersion is a local backport of upstream $tagVersion"
+        }
+
+        if ( $tagVersion.Contains("."))
         {
-            $ref = "php-$PhpVersion"
-            $url = "$baseUrl/refs/tags/php-$PhpVersion.zip"
+            $ref = "php-$tagVersion"
+            $url = "$baseUrl/refs/tags/php-$tagVersion.zip"
         }
         else
         {
-            $ref = $PhpVersion
-            $url = "$baseUrl/$PhpVersion.zip"
+            $ref = $tagVersion
+            $url = "$baseUrl/$tagVersion.zip"
         }
 
         $currentDirectory = (Get-Location).Path
